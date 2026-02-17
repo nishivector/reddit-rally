@@ -3,477 +3,491 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trending Topics Runner</title>
+    <title>Trending Rhythms</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             overflow: hidden; 
-            background: #0d1117;
-            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0a0a0f;
+            font-family: 'Courier New', monospace;
         }
-        #score {
+        #ui {
             position: fixed;
-            top: 20px;
-            left: 20px;
-            color: #58a6ff;
-            font-size: 28px;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 100;
+            background: linear-gradient(to bottom, rgba(10,10,15,0.9), transparent);
+        }
+        #score, #combo {
+            font-size: 24px;
+            color: #00ff88;
+            text-shadow: 0 0 20px #00ff88;
+        }
+        #combo {
+            color: #ff00aa;
+            text-shadow: 0 0 20px #ff00aa;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        #topic-bar {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+        .topic-pill {
+            background: rgba(255,255,255,0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: #fff;
+            font-size: 14px;
+            border: 1px solid rgba(255,255,255,0.2);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+        #lanes {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+        }
+        .lane {
+            width: 80px;
+            height: 200px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            position: relative;
+            background: rgba(0,0,0,0.5);
+        }
+        .lane.active {
+            border-color: #00ff88;
+            box-shadow: 0 0 30px rgba(0,255,136,0.3);
+        }
+        .lane-key {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #666;
+            font-size: 20px;
             font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            z-index: 100;
         }
-        #topic-display {
+        #hit-line {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            color: #f0f6fc;
-            font-size: 16px;
-            max-width: 250px;
-            text-align: right;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, #00ff88, transparent);
+            z-index: 50;
+        }
+        #feedback {
+            position: fixed;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 36px;
+            font-weight: bold;
+            opacity: 0;
+            transition: all 0.2s;
             z-index: 100;
         }
-        #topic-display span {
-            display: block;
-            padding: 8px 12px;
-            background: rgba(88, 166, 255, 0.2);
-            border-radius: 8px;
-            margin-bottom: 5px;
+        #start-screen {
+            position: fixed;
+            inset: 0;
+            background: rgba(10,10,15,0.98);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        #start-screen h1 {
+            font-size: 48px;
+            color: #00ff88;
+            text-shadow: 0 0 30px #00ff88;
+            margin-bottom: 20px;
+        }
+        #start-screen p {
+            color: #888;
+            margin-bottom: 40px;
+        }
+        #start-btn {
+            background: #00ff88;
+            color: #0a0a0f;
+            border: none;
+            padding: 20px 60px;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        #start-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 40px #00ff88;
         }
         #game-over {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(13, 17, 23, 0.95);
-            padding: 40px;
-            border-radius: 20px;
-            text-align: center;
-            color: white;
+            inset: 0;
+            background: rgba(10,10,15,0.95);
             display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             z-index: 200;
-            border: 2px solid #58a6ff;
         }
-        #game-over h2 { color: #58a6ff; margin-bottom: 20px; }
+        #game-over h2 {
+            font-size: 48px;
+            color: #ff00aa;
+            margin-bottom: 20px;
+        }
         #game-over button {
-            background: #58a6ff;
+            background: #ff00aa;
+            color: #fff;
             border: none;
-            padding: 15px 40px;
-            color: #0d1117;
-            font-size: 18px;
-            border-radius: 10px;
+            padding: 15px 50px;
+            font-size: 20px;
+            border-radius: 25px;
             cursor: pointer;
             margin-top: 20px;
-            font-weight: bold;
-        }
-        #game-over button:hover { background: #79b8ff; }
-        #instructions {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: rgba(240, 246, 252, 0.5);
-            font-size: 14px;
-            z-index: 100;
         }
     </style>
 </head>
 <body>
-    <div id="score">Score: 0</div>
-    <div id="topic-display"></div>
-    <div id="game-over">
-        <h2>Game Over!</h2>
-        <p id="final-score">Score: 0</p>
-        <p id="topics-caught">Topics Caught: 0</p>
-        <button onclick="restart()">Play Again</button>
+    <div id="ui">
+        <div id="score">SCORE: 0</div>
+        <div id="combo">COMBO x1</div>
     </div>
-    <div id="instructions">← → or A/D to move • Collect trending topics • Avoid the noise!</div>
-
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
-        }
-    }
-    </script>
+    <div id="topic-bar"></div>
+    <div id="hit-line"></div>
+    <div id="lanes">
+        <div class="lane" data-key="A"><span class="lane-key">A</span></div>
+        <div class="lane" data-key="S"><span class="lane-key">S</span></div>
+        <div class="lane" data-key="D"><span class="lane-key">D</span></div>
+        <div class="lane" data-key="F"><span class="lane-key">F</span></div>
+    </div>
+    <div id="feedback">PERFECT!</div>
+    
+    <div id="start-screen">
+        <h1>🎵 TRENDING RHYTHMS</h1>
+        <p>Hit the keys when the topics reach the line!</p>
+        <button id="start-btn">START</button>
+    </div>
+    
+    <div id="game-over">
+        <h2>GAME OVER</h2>
+        <p id="final-score" style="color:#fff;font-size:24px">Score: 0</p>
+        <p id="max-combo" style="color:#ff00aa;font-size:20px">Max Combo: 0</p>
+        <button onclick="restart()">PLAY AGAIN</button>
+    </div>
 
     <script type="module">
-        import * as THREE from 'three';
+        // Tone.js - Audio
+        import * as Tone from 'https://unpkg.com/tone@14.8.49/build/tone.module.js';
 
         // Game state
         let score = 0;
-        let topicsCaught = 0;
-        let gameOver = false;
-        let speed = 0.4;
-        let lane = 0;
-        let targetLane = 0;
-
-        // Today's trending topics from Reddit
+        let combo = 0;
+        let maxCombo = 0;
+        let gameRunning = false;
+        let bpm = 120;
+        
+        // Trending topics
         const trendingTopics = [
-            { text: "Congress vs Pardons", emoji: "📜", color: 0x3498db, points: 100 },
-            { text: "Michael Jordan", emoji: "🏀", color: 0xe67e22, points: 100 },
-            { text: "Daytona 500", emoji: "🏎️", color: 0xe74c3c, points: 100 },
-            { text: "Constitutional Law", emoji: "⚖️", color: 0x9b59b6, points: 100 },
-            { text: "AI & Tech", emoji: "🤖", color: 0x1abc9c, points: 150 },
-            { text: "Viral Video", emoji: "🎬", color: 0xe91e63, points: 80 },
-            { text: "Climate News", emoji: "🌍", color: 0x2ecc71, points: 90 },
-            { text: "Space Update", emoji: "🚀", color: 0x34495e, points: 120 },
-            { text: "Sports News", emoji: "📰", color: 0xf39c12, points: 80 },
-            { text: "Meme Culture", emoji: "😂", color: 0xff6b6b, points: 70 },
-            { text: "Startup News", emoji: "💡", color: 0x00d4aa, points: 110 },
-            { text: "Gaming Update", emoji: "🎮", color: 0x8b5cf6, points: 100 }
+            { text: "Congress", emoji: "📜", lane: 0, color: "#3498db" },
+            { text: "Jordan", emoji: "🏀", lane: 1, color: "#e67e22" },
+            { text: "Daytona", emoji: "🏎️", lane: 2, color: "#e74c3c" },
+            { text: "AI", emoji: "🤖", lane: 3, color: "#1abc9c" },
+            { text: "Climate", emoji: "🌍", lane: 2, color: "#2ecc71" },
+            { text: "Space", emoji: "🚀", lane: 0, color: "#9b59b6" },
+            { text: "Tech", emoji: "💻", lane: 1, color: "#34495e" },
+            { text: "Sports", emoji: "⚽", lane: 3, color: "#f39c12" }
         ];
 
-        // Bad items (off-topic, spam, etc.)
-        const badItems = [
-            { text: "SPAM", emoji: "🚫", color: 0x666666 },
-            { text: "Noise", emoji: "📢", color: 0x555555 }
-        ];
-
-        // Current topic display
-        let currentTopic = trendingTopics[Math.floor(Math.random() * trendingTopics.length)];
-        document.getElementById('topic-display').innerHTML = `<span>${currentTopic.emoji} ${currentTopic.text}</span>`;
-
-        // Three.js setup
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0x0d1117, 15, 60);
+        const keys = ['a', 's', 'd', 'f'];
+        const notes = ['C4', 'D4', 'E4', 'F4'];
         
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(0, 6, 12);
-        camera.lookAt(0, 0, -5);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setClearColor(0x0d1117);
-        document.body.appendChild(renderer.domElement);
-
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-        scene.add(ambientLight);
+        // Synths
+        let synths = [];
+        let hitSynth;
         
-        const spotLight = new THREE.SpotLight(0x58a6ff, 1);
-        spotLight.position.set(0, 15, 10);
-        spotLight.angle = 0.5;
-        spotLight.penumbra = 0.5;
-        scene.add(spotLight);
-
-        // Neon grid floor
-        const gridHelper = new THREE.GridHelper(40, 40, 0x58a6ff, 0x1f2937);
-        gridHelper.position.z = -15;
-        scene.add(gridHelper);
-
-        // Road
-        const roadGeo = new THREE.PlaneGeometry(10, 80);
-        const roadMat = new THREE.MeshStandardMaterial({ 
-            color: 0x161b22,
-            roughness: 0.9,
-            metalness: 0.1
-        });
-        const road = new THREE.Mesh(roadGeo, roadMat);
-        road.rotation.x = -Math.PI / 2;
-        road.position.z = -30;
-        road.position.y = -0.01;
-        scene.add(road);
-
-        // Lane markers (neon lines)
-        for (let i = 0; i < 15; i++) {
-            const lineGeo = new THREE.PlaneGeometry(0.05, 3);
-            const lineMat = new THREE.MeshBasicMaterial({ color: 0x58a6ff, transparent: true, opacity: 0.5 });
-            const line = new THREE.Mesh(lineGeo, lineMat);
-            line.rotation.x = -Math.PI / 2;
-            line.position.set(0, 0.01, -i * 4);
-            scene.add(line);
-        }
-
-        // Player (抽象的なキャラクター - a glowing orb)
-        const playerGroup = new THREE.Group();
-        
-        // Core
-        const coreGeo = new THREE.IcosahedronGeometry(0.5, 1);
-        const coreMat = new THREE.MeshStandardMaterial({ 
-            color: 0x58a6ff,
-            emissive: 0x58a6ff,
-            emissiveIntensity: 0.8,
-            metalness: 0.8,
-            roughness: 0.2
-        });
-        const core = new THREE.Mesh(coreGeo, coreMat);
-        playerGroup.add(core);
-        
-        // Outer glow
-        const glowGeo = new THREE.IcosahedronGeometry(0.7, 1);
-        const glowMat = new THREE.MeshBasicMaterial({ 
-            color: 0x58a6ff, 
-            transparent: true, 
-            opacity: 0.2,
-            wireframe: true
-        });
-        const glow = new THREE.Mesh(glowGeo, glowMat);
-        playerGroup.add(glow);
-        
-        playerGroup.position.y = 0.7;
-        scene.add(playerGroup);
-
-        // Items array
-        const items = [];
-
-        function createItem() {
-            const isBad = Math.random() < 0.2;
-            const topic = isBad 
-                ? badItems[Math.floor(Math.random() * badItems.length)]
-                : trendingTopics[Math.floor(Math.random() * trendingTopics.length)];
+        async function initAudio() {
+            await Tone.start();
             
-            const lanePos = (Math.random() - 0.5) * 7;
-            
-            const group = new THREE.Group();
-            
-            // Base platform
-            const baseGeo = new THREE.CylinderGeometry(0.5, 0.6, 0.15, 16);
-            const baseMat = new THREE.MeshStandardMaterial({ 
-                color: topic.color,
-                emissive: topic.color,
-                emissiveIntensity: 0.4,
-                metalness: 0.5
-            });
-            const base = new THREE.Mesh(baseGeo, baseMat);
-            group.add(base);
-            
-            // Floating emoji representation (colored sphere with label effect)
-            const sphereGeo = new THREE.SphereGeometry(0.35, 16, 16);
-            const sphereMat = new THREE.MeshStandardMaterial({ 
-                color: topic.color,
-                emissive: topic.color,
-                emissiveIntensity: 0.6
-            });
-            const sphere = new THREE.Mesh(sphereGeo, sphereMat);
-            sphere.position.y = 0.5;
-            group.add(sphere);
-            
-            // Emoji ring
-            const ringGeo = new THREE.TorusGeometry(0.5, 0.03, 8, 32);
-            const ringMat = new THREE.MeshBasicMaterial({ color: topic.color });
-            const ring = new THREE.Mesh(ringGeo, ringMat);
-            ring.position.y = 0.5;
-            ring.rotation.x = Math.PI / 2;
-            group.add(ring);
-            
-            group.position.set(lanePos, 0.5, -50);
-            group.userData = { 
-                isBad: isBad,
-                text: topic.text,
-                emoji: topic.emoji,
-                points: topic.points || 0,
-                color: topic.color
-            };
-            scene.add(group);
-            items.push(group);
-        }
-
-        // Particles
-        const particles = [];
-        
-        function createParticles(pos, color, count = 12) {
-            for (let i = 0; i < count; i++) {
-                const geo = new THREE.SphereGeometry(0.1, 4, 4);
-                const mat = new THREE.MeshBasicMaterial({ color: color });
-                const particle = new THREE.Mesh(geo, mat);
-                particle.position.copy(pos);
-                particle.userData = {
-                    vel: new THREE.Vector3(
-                        (Math.random() - 0.5) * 0.4,
-                        Math.random() * 0.4 + 0.2,
-                        (Math.random() - 0.5) * 0.4
-                    ),
-                    life: 1.0
-                };
-                scene.add(particle);
-                particles.push(particle);
+            // Create synth for each lane
+            for (let i = 0; i < 4; i++) {
+                const synth = new Tone.Synth({
+                    oscillator: { type: i % 2 === 0 ? 'triangle' : 'sine' },
+                    envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.5 }
+                }).toDestination();
+                synth.volume.value = -10;
+                synths.push(synth);
             }
+            
+            // Hit sound
+            hitSynth = new Tone.MembraneSynth({
+                pitchDecay: 0.05,
+                octaves: 4,
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.5 }
+            }).toDestination();
+            hitSynth.volume.value = -5;
         }
 
-        // Text popup
-        function showFloatingText(text, x, y, color) {
-            const div = document.createElement('div');
-            div.style.cssText = `
+        // UI Elements
+        const scoreEl = document.getElementById('score');
+        const comboEl = document.getElementById('combo');
+        const feedbackEl = document.getElementById('feedback');
+        const topicBar = document.getElementById('topic-bar');
+        const lanesEl = document.querySelectorAll('.lane');
+        
+        // Current topics display
+        let currentTopics = [];
+        
+        function updateTopicBar() {
+            currentTopics = [];
+            const shuffled = [...trendingTopics].sort(() => Math.random() - 0.5);
+            for (let i = 0; i < 4; i++) {
+                currentTopics.push(shuffled[i]);
+            }
+            
+            topicBar.innerHTML = currentTopics.map(t => 
+                `<span class="topic-pill" style="border-color:${t.color}">${t.emoji} ${t.text}</span>`
+            ).join('');
+        }
+        
+        // Notes falling
+        const notesEl = [];
+        const noteSpeed = 400; // pixels per second
+        
+        function spawnNote(laneIndex) {
+            const note = document.createElement('div');
+            note.className = 'note';
+            note.dataset.lane = laneIndex;
+            note.dataset.active = 'true';
+            note.style.cssText = `
                 position: fixed;
-                left: ${x}px;
-                top: ${y}px;
-                color: ${color};
-                font-size: 24px;
-                font-weight: bold;
-                pointer-events: none;
-                z-index: 150;
-                text-shadow: 0 0 10px ${color};
-                transition: all 0.5s ease-out;
+                left: ${50 + (laneIndex - 1.5) * 100}px;
+                top: -50px;
+                width: 70px;
+                height: 70px;
+                border-radius: 50%;
+                background: ${currentTopics[laneIndex]?.color || '#00ff88'};
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 30px;
+                box-shadow: 0 0 20px ${currentTopics[laneIndex]?.color || '#00ff88'};
+                z-index: 60;
             `;
-            div.textContent = text;
-            document.body.appendChild(div);
-            
-            setTimeout(() => {
-                div.style.transform = 'translateY(-50px)';
-                div.style.opacity = '0';
-            }, 50);
-            
-            setTimeout(() => div.remove(), 550);
+            note.textContent = currentTopics[laneIndex]?.emoji || '♪';
+            document.body.appendChild(note);
+            notesEl.push({ el: note, y: -50, lane: laneIndex, time: Date.now() });
         }
 
         // Input handling
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-                targetLane = Math.max(targetLane - 1.8, -4);
-            }
-            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-                targetLane = Math.min(targetLane + 1.8, 4);
-            }
-        });
-
-        // UI updates
-        const scoreEl = document.getElementById('score');
+        const keyState = {};
         
-        function updateScore(points, isBad = false) {
-            if (isBad) {
-                gameOver_();
-                return;
-            }
-            score += points;
-            topicsCaught++;
-            scoreEl.textContent = `Score: ${score}`;
-            scoreEl.style.transform = 'scale(1.2)';
-            scoreEl.style.color = isBad ? '#ff6b6b' : '#58a6ff';
-            setTimeout(() => {
-                scoreEl.style.transform = 'scale(1)';
-                scoreEl.style.color = '#58a6ff';
-            }, 150);
-            
-            // Show floating points
-            const screenPos = playerGroup.position.clone();
-            screenPos.project(camera);
-            const x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
-            const y = (-screenPos.y * 0.5 + 0.5) * window.innerHeight;
-            showFloatingText(`+${points}`, x, y - 50, '#58a6ff');
-            
-            // Update current topic periodically
-            if (topicsCaught % 3 === 0) {
-                currentTopic = trendingTopics[Math.floor(Math.random() * trendingTopics.length)];
-                document.getElementById('topic-display').innerHTML = 
-                    `<span>${currentTopic.emoji} ${currentTopic.text}</span>`;
-            }
-        }
-
-        function gameOver_() {
-            gameOver = true;
-            document.getElementById('game-over').style.display = 'block';
-            document.getElementById('final-score').textContent = `Score: ${score}`;
-            document.getElementById('topics-caught').textContent = `Topics Caught: ${topicsCaught}`;
-        }
-
-        window.restart = function() {
-            score = 0;
-            topicsCaught = 0;
-            speed = 0.4;
-            targetLane = 0;
-            lane = 0;
-            gameOver = false;
-            scoreEl.textContent = 'Score: 0';
-            document.getElementById('game-over').style.display = 'none';
-            
-            items.forEach(item => scene.remove(item));
-            items.length = 0;
-            
-            currentTopic = trendingTopics[Math.floor(Math.random() * trendingTopics.length)];
-            document.getElementById('topic-display').innerHTML = 
-                `<span>${currentTopic.emoji} ${currentTopic.text}</span>`;
-        };
-
-        // Animation loop
-        let frame = 0;
-        function animate() {
-            requestAnimationFrame(animate);
-            frame++;
-            
-            if (gameOver) {
-                renderer.render(scene, camera);
-                return;
-            }
-            
-            // Smooth lane movement
-            lane += (targetLane - lane) * 0.12;
-            playerGroup.position.x = lane;
-            
-            // Player animations
-            core.rotation.y += 0.02;
-            core.rotation.x += 0.01;
-            glow.rotation.y -= 0.01;
-            glow.rotation.z += 0.005;
-            
-            // Bobbing
-            playerGroup.position.y = 0.7 + Math.sin(frame * 0.08) * 0.1;
-            
-            // Spawn items
-            if (frame % 35 === 0) {
-                createItem();
-            }
-            
-            // Move items
-            for (let i = items.length - 1; i >= 0; i--) {
-                const item = items[i];
-                item.position.z += speed;
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            if (keys.includes(key) && !keyState[key]) {
+                keyState[key] = true;
+                const laneIndex = keys.indexOf(key);
+                lanesEl[laneIndex].classList.add('active');
                 
-                // Rotation animation
-                item.rotation.y += 0.03;
-                const sphere = item.children[1];
-                if (sphere) sphere.position.y = 0.5 + Math.sin(frame * 0.1) * 0.1;
-                
-                // Collision detection
-                const dx = item.position.x - playerGroup.position.x;
-                const dz = item.position.z - playerGroup.position.z;
-                const dist = Math.sqrt(dx * dx + dz * dz);
-                
-                if (dist < 0.9 && Math.abs(dz) < 0.6) {
-                    if (item.userData.isBad) {
-                        updateScore(0, true);
-                    } else {
-                        updateScore(item.userData.points);
-                        createParticles(item.position, item.userData.color);
-                    }
-                    scene.remove(item);
-                    items.splice(i, 1);
-                    continue;
+                // Play sound
+                if (synths[laneIndex]) {
+                    synths[laneIndex].triggerAttackRelease(notes[laneIndex], '8n');
                 }
                 
-                // Remove if past camera
-                if (item.position.z > 15) {
-                    scene.remove(item);
-                    items.splice(i, 1);
-                }
+                // Check hit
+                checkHit(laneIndex);
             }
-            
-            // Update particles
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-                p.position.add(p.userData.vel);
-                p.userData.vel.y -= 0.015;
-                p.userData.life -= 0.025;
-                p.scale.setScalar(p.userData.life);
-                
-                if (p.userData.life <= 0) {
-                    scene.remove(p);
-                    particles.splice(i, 1);
-                }
+        });
+        
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if (keys.includes(key)) {
+                keyState[key] = false;
+                lanesEl[keys.indexOf(key)].classList.remove('active');
             }
-            
-            // Speed increase
-            speed = 0.4 + score * 0.00015;
-            
-            renderer.render(scene, camera);
-        }
-
-        // Handle resize
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        animate();
+        function checkHit(laneIndex) {
+            const hitY = window.innerHeight - 280;
+            const hitWindow = 80;
+            
+            let hit = false;
+            for (let i = notesEl.length - 1; i >= 0; i--) {
+                const note = notesEl[i];
+                if (note.lane === laneIndex && note.el.dataset.active === 'true') {
+                    const diff = Math.abs(note.y - hitY);
+                    if (diff < hitWindow) {
+                        hit = true;
+                        note.el.dataset.active = 'false';
+                        note.el.style.opacity = '0';
+                        note.el.style.transform = 'scale(1.5)';
+                        
+                        // Score based on accuracy
+                        let points = 0;
+                        let feedback = '';
+                        let feedbackColor = '#00ff88';
+                        
+                        if (diff < 25) {
+                            points = 300;
+                            feedback = 'PERFECT!';
+                            feedbackColor = '#00ff88';
+                        } else if (diff < 50) {
+                            points = 150;
+                            feedback = 'GREAT!';
+                            feedbackColor = '#00ffaa';
+                        } else {
+                            points = 50;
+                            feedback = 'GOOD';
+                            feedbackColor = '#ffaa00';
+                        }
+                        
+                        combo++;
+                        if (combo > maxCombo) maxCombo = combo;
+                        
+                        score += points * (1 + Math.floor(combo / 10) * 0.1);
+                        
+                        showFeedback(feedback, feedbackColor);
+                        
+                        // Hit sound
+                        if (hitSynth) {
+                            hitSynth.triggerAttackRelease('C2', '16n');
+                        }
+                        
+                        setTimeout(() => note.el.remove(), 200);
+                        notesEl.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+            
+            if (!hit) {
+                combo = 0;
+                showFeedback('MISS', '#ff0066');
+            }
+            
+            updateUI();
+        }
+
+        function showFeedback(text, color) {
+            feedbackEl.textContent = text;
+            feedbackEl.style.color = color;
+            feedbackEl.style.textShadow = `0 0 30px ${color}`;
+            feedbackEl.style.opacity = '1';
+            feedbackEl.style.transform = 'translateX(-50%) scale(1.2)';
+            
+            setTimeout(() => {
+                feedbackEl.style.opacity = '0';
+                feedbackEl.style.transform = 'translateX(-50%) scale(1)';
+            }, 300);
+        }
+
+        function updateUI() {
+            scoreEl.textContent = `SCORE: ${Math.floor(score)}`;
+            if (combo > 1) {
+                comboEl.textContent = `COMBO x${combo}`;
+                comboEl.style.opacity = '1';
+            } else {
+                comboEl.style.opacity = '0';
+            }
+        }
+
+        // Game loop
+        let lastSpawn = 0;
+        const spawnInterval = 800;
+        
+        function gameLoop(timestamp) {
+            if (!gameRunning) return;
+            
+            const delta = timestamp - lastSpawn;
+            
+            // Spawn notes
+            if (delta > spawnInterval) {
+                const lane = Math.floor(Math.random() * 4);
+                spawnNote(lane);
+                lastSpawn = timestamp;
+            }
+            
+            // Move notes
+            const hitY = window.innerHeight - 280;
+            for (let i = notesEl.length - 1; i >= 0; i--) {
+                const note = notesEl[i];
+                if (note.el.dataset.active === 'false') continue;
+                
+                note.y += (noteSpeed / 60) * 1.5;
+                note.el.style.top = `${note.y}px`;
+                
+                // Missed note
+                if (note.y > hitY + 100) {
+                    note.el.remove();
+                    notesEl.splice(i, 1);
+                    combo = 0;
+                    showFeedback('MISS', '#ff0066');
+                    updateUI();
+                }
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            gameRunning = true;
+            score = 0;
+            combo = 0;
+            maxCombo = 0;
+            updateTopicBar();
+            updateUI();
+            lastSpawn = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function restart() {
+            document.getElementById('game-over').style.display = 'none';
+            notesEl.forEach(n => n.el.remove());
+            notesEl.length = 0;
+            gameRunning = true;
+            score = 0;
+            combo = 0;
+            updateTopicBar();
+            updateUI();
+            lastSpawn = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start button
+        document.getElementById('start-btn').addEventListener('click', async () => {
+            await initAudio();
+            startGame();
+        });
+
+        // Keyboard start
+        window.addEventListener('keydown', (e) => {
+            if (!gameRunning && document.getElementById('start-screen').style.display !== 'none') {
+                if (['a','s','d','f',' '].includes(e.key.toLowerCase())) {
+                    document.getElementById('start-btn').click();
+                }
+            }
+        });
     </script>
 </body>
 </html>
