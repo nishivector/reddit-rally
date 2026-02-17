@@ -3,13 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trending Rhythms</title>
+    <title>Reddit Rally</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             overflow: hidden; 
-            background: #0a0a0f;
+            background: #0d1117;
             font-family: 'Courier New', monospace;
+            transition: transform 0.1s;
+        }
+        body.shake {
+            animation: shake 0.3s ease-out;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px) rotate(-1deg); }
+            40% { transform: translateX(10px) rotate(1deg); }
+            60% { transform: translateX(-5px) rotate(-0.5deg); }
+            80% { transform: translateX(5px) rotate(0.5deg); }
         }
         #ui {
             position: fixed;
@@ -19,475 +30,554 @@
             padding: 20px 30px;
             display: flex;
             justify-content: space-between;
+            align-items: center;
             z-index: 100;
-            background: linear-gradient(to bottom, rgba(10,10,15,0.9), transparent);
+            background: linear-gradient(to bottom, rgba(13,17,23,0.9), transparent);
         }
         #score, #combo {
             font-size: 24px;
-            color: #00ff88;
-            text-shadow: 0 0 20px #00ff88;
+            color: #58a6ff;
+            text-shadow: 0 0 20px #58a6ff;
+        }
+        #lives {
+            font-size: 24px;
+            letter-spacing: 5px;
         }
         #combo {
-            color: #ff00aa;
-            text-shadow: 0 0 20px #ff00aa;
+            color: #ffd700;
+            text-shadow: 0 0 20px #ffd700;
             opacity: 0;
             transition: opacity 0.2s;
         }
-        #topic-bar {
+        #topic-display {
             position: fixed;
             top: 70px;
             left: 50%;
             transform: translateX(-50%);
-            display: flex;
-            gap: 10px;
-            z-index: 100;
-        }
-        .topic-pill {
-            background: rgba(255,255,255,0.1);
-            padding: 8px 16px;
-            border-radius: 20px;
-            color: #fff;
-            font-size: 14px;
-            border: 1px solid rgba(255,255,255,0.2);
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 0.7; }
-            50% { opacity: 1; }
-        }
-        #lanes {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 20px;
-        }
-        .lane {
-            width: 80px;
-            height: 200px;
-            border: 2px solid #333;
+            color: #f0f6fc;
+            font-size: 18px;
+            padding: 10px 20px;
+            background: rgba(88, 166, 255, 0.15);
             border-radius: 10px;
-            position: relative;
-            background: rgba(0,0,0,0.5);
-        }
-        .lane.active {
-            border-color: #00ff88;
-            box-shadow: 0 0 30px rgba(0,255,136,0.3);
-        }
-        .lane-key {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #666;
-            font-size: 20px;
-            font-weight: bold;
-        }
-        #hit-line {
-            position: fixed;
-            bottom: 120px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 400px;
-            height: 4px;
-            background: linear-gradient(90deg, transparent, #00ff88, transparent);
-            z-index: 50;
-        }
-        #feedback {
-            position: fixed;
-            bottom: 200px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 36px;
-            font-weight: bold;
-            opacity: 0;
-            transition: all 0.2s;
+            border: 1px solid rgba(88, 166, 255, 0.3);
             z-index: 100;
         }
-        #start-screen {
+        #game-over, #start-screen {
             position: fixed;
             inset: 0;
-            background: rgba(10,10,15,0.98);
+            background: rgba(13, 17, 23, 0.95);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 200;
         }
-        #start-screen h1 {
-            font-size: 48px;
-            color: #00ff88;
-            text-shadow: 0 0 30px #00ff88;
+        #game-over h2, #start-screen h1 {
+            color: #58a6ff;
+            text-shadow: 0 0 30px #58a6ff;
             margin-bottom: 20px;
         }
+        #start-screen h1 { font-size: 48px; }
+        #game-over h2 { font-size: 42px; }
         #start-screen p {
             color: #888;
             margin-bottom: 40px;
+            font-size: 18px;
         }
-        #start-btn {
-            background: #00ff88;
-            color: #0a0a0f;
+        #game-over p {
+            color: #fff;
+            font-size: 20px;
+            margin: 10px 0;
+        }
+        #start-btn, #restart-btn {
+            background: #58a6ff;
+            color: #0d1117;
             border: none;
-            padding: 20px 60px;
-            font-size: 24px;
+            padding: 18px 50px;
+            font-size: 22px;
             font-weight: bold;
             border-radius: 30px;
             cursor: pointer;
             transition: all 0.3s;
-        }
-        #start-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 40px #00ff88;
-        }
-        #game-over {
-            position: fixed;
-            inset: 0;
-            background: rgba(10,10,15,0.95);
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 200;
-        }
-        #game-over h2 {
-            font-size: 48px;
-            color: #ff00aa;
-            margin-bottom: 20px;
-        }
-        #game-over button {
-            background: #ff00aa;
-            color: #fff;
-            border: none;
-            padding: 15px 50px;
-            font-size: 20px;
-            border-radius: 25px;
-            cursor: pointer;
             margin-top: 20px;
+        }
+        #start-btn:hover, #restart-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 40px #58a6ff;
+        }
+        #github-link {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: #666;
+            font-size: 14px;
+            text-decoration: none;
+            z-index: 100;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+        #github-link:hover {
+            opacity: 1;
+            color: #fff;
+        }
+        #instructions {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(240, 246, 252, 0.5);
+            font-size: 14px;
+            z-index: 100;
+        }
+        .particle {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 70;
+        }
+        @keyframes particleExplode {
+            0% { opacity: 1; transform: translate(0, 0) scale(1); }
+            100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
+        }
+        .combo-burst {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 0 0 30px #ffd700;
+            pointer-events: none;
+            z-index: 200;
+            animation: comboBurst 0.8s ease-out forwards;
+        }
+        @keyframes comboBurst {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
         }
     </style>
 </head>
 <body>
     <div id="ui">
         <div id="score">SCORE: 0</div>
+        <div id="lives">❤️❤️❤️❤️❤️</div>
         <div id="combo">COMBO x1</div>
     </div>
-    <div id="topic-bar"></div>
-    <div id="hit-line"></div>
-    <div id="lanes">
-        <div class="lane" data-key="A"><span class="lane-key">A</span></div>
-        <div class="lane" data-key="S"><span class="lane-key">S</span></div>
-        <div class="lane" data-key="D"><span class="lane-key">D</span></div>
-        <div class="lane" data-key="F"><span class="lane-key">F</span></div>
-    </div>
-    <div id="feedback">PERFECT!</div>
+    <div id="topic-display">🏃 Reddit Rally</div>
     
     <div id="start-screen">
-        <h1>🎵 TRENDING RHYTHMS</h1>
-        <p>Hit the keys when the topics reach the line!</p>
+        <h1>🏃 REDDIT RALLY</h1>
+        <p>Dodge the downvotes, collect trending topics!</p>
         <button id="start-btn">START</button>
     </div>
     
     <div id="game-over">
         <h2>GAME OVER</h2>
-        <p id="final-score" style="color:#fff;font-size:24px">Score: 0</p>
-        <p id="max-combo" style="color:#ff00aa;font-size:20px">Max Combo: 0</p>
-        <button onclick="restart()">PLAY AGAIN</button>
+        <p id="final-score">Score: 0</p>
+        <p id="topics-caught">Topics Caught: 0</p>
+        <button id="restart-btn">PLAY AGAIN</button>
     </div>
+    
+    <div id="instructions">← → or A/D to move • Collect topics • Avoid downvotes</div>
+    <a id="github-link" href="https://github.com/nishivector/reddit-rally" target="_blank">View Source</a>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+        }
+    }
+    </script>
 
     <script type="module">
-        // Tone.js - Audio
-        import * as Tone from 'https://unpkg.com/tone@14.8.49/build/tone.module.js';
+        import * as THREE from 'three';
+        
+        // Import Tone.js
+        let Tone;
+        try {
+            const toneModule = await import('https://cdn.jsdelivr.net/npm/tone@14.8.49/+esm');
+            Tone = toneModule;
+        } catch(e) {
+            console.log('Tone.js not loaded');
+        }
 
         // Game state
         let score = 0;
         let combo = 0;
         let maxCombo = 0;
+        let topicsCaught = 0;
         let gameRunning = false;
-        let bpm = 120;
+        let speed = 0.4;
+        let lives = 5;
+        let lane = 0;
+        let targetLane = 0;
         
         // Trending topics
         const trendingTopics = [
-            { text: "Congress", emoji: "📜", lane: 0, color: "#3498db" },
-            { text: "Jordan", emoji: "🏀", lane: 1, color: "#e67e22" },
-            { text: "Daytona", emoji: "🏎️", lane: 2, color: "#e74c3c" },
-            { text: "AI", emoji: "🤖", lane: 3, color: "#1abc9c" },
-            { text: "Climate", emoji: "🌍", lane: 2, color: "#2ecc71" },
-            { text: "Space", emoji: "🚀", lane: 0, color: "#9b59b6" },
-            { text: "Tech", emoji: "💻", lane: 1, color: "#34495e" },
-            { text: "Sports", emoji: "⚽", lane: 3, color: "#f39c12" }
+            { text: "Congress", emoji: "📜", color: 0x3498db, points: 100 },
+            { text: "Jordan", emoji: "🏀", color: 0xe67e22, points: 100 },
+            { text: "Daytona", emoji: "🏎️", color: 0xe74c3c, points: 100 },
+            { text: "AI", emoji: "🤖", color: 0x1abc9c, points: 150 },
+            { text: "Climate", emoji: "🌍", color: 0x2ecc71, points: 90 },
+            { text: "Space", emoji: "🚀", color: 0x9b59b6, points: 120 },
+            { text: "Tech", emoji: "💻", color: 0x34495e, points: 80 },
+            { text: "Sports", emoji: "⚽", color: 0xf39c12, points: 80 }
         ];
-
-        const keys = ['a', 's', 'd', 'f'];
-        const notes = ['C4', 'D4', 'E4', 'F4'];
         
-        // Synths
-        let synths = [];
-        let hitSynth;
+        const badItems = [
+            { text: "SPAM", emoji: "🚫", color: 0x666666 },
+            { text: "DOWN", emoji: "⬇️", color: 0x555555 }
+        ];
+        
+        // Audio
+        let synth, hitSound;
         
         async function initAudio() {
+            if (!Tone) return;
             await Tone.start();
             
-            // Create synth for each lane
-            for (let i = 0; i < 4; i++) {
-                const synth = new Tone.Synth({
-                    oscillator: { type: i % 2 === 0 ? 'triangle' : 'sine' },
-                    envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.5 }
-                }).toDestination();
-                synth.volume.value = -10;
-                synths.push(synth);
-            }
-            
-            // Hit sound
-            hitSynth = new Tone.MembraneSynth({
-                pitchDecay: 0.05,
-                octaves: 4,
-                oscillator: { type: 'sine' },
-                envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.5 }
+            synth = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.5 }
             }).toDestination();
-            hitSynth.volume.value = -5;
-        }
-
-        // UI Elements
-        const scoreEl = document.getElementById('score');
-        const comboEl = document.getElementById('combo');
-        const feedbackEl = document.getElementById('feedback');
-        const topicBar = document.getElementById('topic-bar');
-        const lanesEl = document.querySelectorAll('.lane');
-        
-        // Current topics display
-        let currentTopics = [];
-        
-        function updateTopicBar() {
-            currentTopics = [];
-            const shuffled = [...trendingTopics].sort(() => Math.random() - 0.5);
-            for (let i = 0; i < 4; i++) {
-                currentTopics.push(shuffled[i]);
-            }
+            synth.volume.value = -15;
             
-            topicBar.innerHTML = currentTopics.map(t => 
-                `<span class="topic-pill" style="border-color:${t.color}">${t.emoji} ${t.text}</span>`
-            ).join('');
-        }
-        
-        // Notes falling
-        const notesEl = [];
-        const noteSpeed = 400; // pixels per second
-        
-        function spawnNote(laneIndex) {
-            const note = document.createElement('div');
-            note.className = 'note';
-            note.dataset.lane = laneIndex;
-            note.dataset.active = 'true';
-            note.style.cssText = `
-                position: fixed;
-                left: ${50 + (laneIndex - 1.5) * 100}px;
-                top: -50px;
-                width: 70px;
-                height: 70px;
-                border-radius: 50%;
-                background: ${currentTopics[laneIndex]?.color || '#00ff88'};
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 30px;
-                box-shadow: 0 0 20px ${currentTopics[laneIndex]?.color || '#00ff88'};
-                z-index: 60;
-            `;
-            note.textContent = currentTopics[laneIndex]?.emoji || '♪';
-            document.body.appendChild(note);
-            notesEl.push({ el: note, y: -50, lane: laneIndex, time: Date.now() });
+            hitSound = new Tone.MembraneSynth({
+                pitchDecay: 0.05,
+                octaves: 4
+            }).toDestination();
+            hitSound.volume.value = -10;
         }
 
-        // Input handling
-        const keyState = {};
+        // Three.js setup
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x0d1117, 15, 60);
         
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 6, 12);
+        camera.lookAt(0, 0, -5);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x0d1117);
+        document.body.appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+        
+        const spotLight = new THREE.SpotLight(0x58a6ff, 1);
+        spotLight.position.set(0, 15, 10);
+        spotLight.angle = 0.5;
+        spotLight.penumbra = 0.5;
+        scene.add(spotLight);
+
+        // Neon grid
+        const gridHelper = new THREE.GridHelper(40, 40, 0x58a6ff, 0x1f2937);
+        gridHelper.position.z = -15;
+        scene.add(gridHelper);
+
+        // Road
+        const roadGeo = new THREE.PlaneGeometry(10, 80);
+        const roadMat = new THREE.MeshStandardMaterial({ 
+            color: 0x161b22,
+            roughness: 0.9
+        });
+        const road = new THREE.Mesh(roadGeo, roadMat);
+        road.rotation.x = -Math.PI / 2;
+        road.position.z = -30;
+        road.position.y = -0.01;
+        scene.add(road);
+
+        // Lane markers
+        for (let i = 0; i < 15; i++) {
+            const lineGeo = new THREE.PlaneGeometry(0.05, 3);
+            const lineMat = new THREE.MeshBasicMaterial({ color: 0x58a6ff, transparent: true, opacity: 0.5 });
+            const line = new THREE.Mesh(lineGeo, lineMat);
+            line.rotation.x = -Math.PI / 2;
+            line.position.set(0, 0.01, -i * 4);
+            scene.add(line);
+        }
+
+        // Player (glowing orb)
+        const playerGroup = new THREE.Group();
+        
+        const coreGeo = new THREE.IcosahedronGeometry(0.5, 1);
+        const coreMat = new THREE.MeshStandardMaterial({ 
+            color: 0x58a6ff,
+            emissive: 0x58a6ff,
+            emissiveIntensity: 0.8,
+            metalness: 0.8,
+            roughness: 0.2
+        });
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        playerGroup.add(core);
+        
+        const glowGeo = new THREE.IcosahedronGeometry(0.7, 1);
+        const glowMat = new THREE.MeshBasicMaterial({ 
+            color: 0x58a6ff, 
+            transparent: true, 
+            opacity: 0.2,
+            wireframe: true
+        });
+        const glow = new THREE.Mesh(glowGeo, glowMat);
+        playerGroup.add(glow);
+        
+        playerGroup.position.y = 0.7;
+        scene.add(playerGroup);
+
+        // Items
+        const items = [];
+
+        function createItem() {
+            const isBad = Math.random() < 0.25;
+            const topic = isBad 
+                ? badItems[Math.floor(Math.random() * badItems.length)]
+                : trendingTopics[Math.floor(Math.random() * trendingTopics.length)];
+            
+            const lanePos = (Math.random() - 0.5) * 7;
+            
+            const group = new THREE.Group();
+            
+            const baseGeo = new THREE.CylinderGeometry(0.5, 0.6, 0.15, 16);
+            const baseMat = new THREE.MeshStandardMaterial({ 
+                color: topic.color,
+                emissive: topic.color,
+                emissiveIntensity: 0.4,
+                metalness: 0.5
+            });
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            group.add(base);
+            
+            const sphereGeo = new THREE.SphereGeometry(0.35, 16, 16);
+            const sphereMat = new THREE.MeshStandardMaterial({ 
+                color: topic.color,
+                emissive: topic.color,
+                emissiveIntensity: 0.6
+            });
+            const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+            sphere.position.y = 0.5;
+            group.add(sphere);
+            
+            const ringGeo = new THREE.TorusGeometry(0.5, 0.03, 8, 32);
+            const ringMat = new THREE.MeshBasicMaterial({ color: topic.color });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.position.y = 0.5;
+            ring.rotation.x = Math.PI / 2;
+            group.add(ring);
+            
+            group.position.set(lanePos, 0.5, -50);
+            group.userData = { 
+                isBad: isBad,
+                text: topic.text,
+                emoji: topic.emoji,
+                points: topic.points || 0,
+                color: topic.color
+            };
+            scene.add(group);
+            items.push(group);
+        }
+
+        // Particles
+        function createParticles(pos, color) {
+            for (let i = 0; i < 12; i++) {
+                const geo = new THREE.SphereGeometry(0.1, 4, 4);
+                const mat = new THREE.MeshBasicMaterial({ color: color });
+                const particle = new THREE.Mesh(geo, mat);
+                particle.position.copy(pos);
+                particle.userData = {
+                    vel: new THREE.Vector3(
+                        (Math.random() - 0.5) * 0.4,
+                        Math.random() * 0.4 + 0.2,
+                        (Math.random() - 0.5) * 0.4
+                    ),
+                    life: 1.0
+                };
+                scene.add(particle);
+                particles.push(particle);
+            }
+        }
+        const particles = [];
+
+        // Screen shake
+        function screenShake() {
+            document.body.classList.add('shake');
+            setTimeout(() => document.body.classList.remove('shake'), 300);
+        }
+
+        // Combo burst
+        function comboBurst(combo) {
+            if (combo > 0 && combo % 25 === 0) {
+                const burst = document.createElement('div');
+                burst.className = 'combo-burst';
+                burst.textContent = `${combo}x!`;
+                document.body.appendChild(burst);
+                setTimeout(() => burst.remove(), 800);
+            }
+        }
+
+        // Input
         window.addEventListener('keydown', (e) => {
-            const key = e.key.toLowerCase();
-            if (keys.includes(key) && !keyState[key]) {
-                keyState[key] = true;
-                const laneIndex = keys.indexOf(key);
-                lanesEl[laneIndex].classList.add('active');
-                
-                // Play sound
-                if (synths[laneIndex]) {
-                    synths[laneIndex].triggerAttackRelease(notes[laneIndex], '8n');
-                }
-                
-                // Check hit
-                checkHit(laneIndex);
+            if (!gameRunning) return;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                targetLane = Math.max(targetLane - 1.8, -4);
+            }
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                targetLane = Math.min(targetLane + 1.8, 4);
             }
         });
+
+        // UI
+        const scoreEl = document.getElementById('score');
         
-        window.addEventListener('keyup', (e) => {
-            const key = e.key.toLowerCase();
-            if (keys.includes(key)) {
-                keyState[key] = false;
-                lanesEl[keys.indexOf(key)].classList.remove('active');
-            }
-        });
-
-        function checkHit(laneIndex) {
-            const hitY = window.innerHeight - 280;
-            const hitWindow = 80;
-            
-            let hit = false;
-            for (let i = notesEl.length - 1; i >= 0; i--) {
-                const note = notesEl[i];
-                if (note.lane === laneIndex && note.el.dataset.active === 'true') {
-                    const diff = Math.abs(note.y - hitY);
-                    if (diff < hitWindow) {
-                        hit = true;
-                        note.el.dataset.active = 'false';
-                        note.el.style.opacity = '0';
-                        note.el.style.transform = 'scale(1.5)';
-                        
-                        // Score based on accuracy
-                        let points = 0;
-                        let feedback = '';
-                        let feedbackColor = '#00ff88';
-                        
-                        if (diff < 25) {
-                            points = 300;
-                            feedback = 'PERFECT!';
-                            feedbackColor = '#00ff88';
-                        } else if (diff < 50) {
-                            points = 150;
-                            feedback = 'GREAT!';
-                            feedbackColor = '#00ffaa';
-                        } else {
-                            points = 50;
-                            feedback = 'GOOD';
-                            feedbackColor = '#ffaa00';
-                        }
-                        
-                        combo++;
-                        if (combo > maxCombo) maxCombo = combo;
-                        
-                        score += points * (1 + Math.floor(combo / 10) * 0.1);
-                        
-                        showFeedback(feedback, feedbackColor);
-                        
-                        // Hit sound
-                        if (hitSynth) {
-                            hitSynth.triggerAttackRelease('C2', '16n');
-                        }
-                        
-                        setTimeout(() => note.el.remove(), 200);
-                        notesEl.splice(i, 1);
-                        break;
-                    }
-                }
-            }
-            
-            if (!hit) {
-                combo = 0;
-                showFeedback('MISS', '#ff0066');
-            }
-            
-            updateUI();
-        }
-
-        function showFeedback(text, color) {
-            feedbackEl.textContent = text;
-            feedbackEl.style.color = color;
-            feedbackEl.style.textShadow = `0 0 30px ${color}`;
-            feedbackEl.style.opacity = '1';
-            feedbackEl.style.transform = 'translateX(-50%) scale(1.2)';
-            
-            setTimeout(() => {
-                feedbackEl.style.opacity = '0';
-                feedbackEl.style.transform = 'translateX(-50%) scale(1)';
-            }, 300);
-        }
-
         function updateUI() {
             scoreEl.textContent = `SCORE: ${Math.floor(score)}`;
+            const hearts = '❤️'.repeat(lives) + '🖤'.repeat(5 - lives);
+            document.getElementById('lives').textContent = hearts;
+            
             if (combo > 1) {
-                comboEl.textContent = `COMBO x${combo}`;
-                comboEl.style.opacity = '1';
+                document.getElementById('combo').textContent = `COMBO x${combo}`;
+                document.getElementById('combo').style.opacity = '1';
             } else {
-                comboEl.style.opacity = '0';
+                document.getElementById('combo').style.opacity = '0';
             }
         }
 
-        // Game loop
-        let lastSpawn = 0;
-        const spawnInterval = 800;
-        
-        function gameLoop(timestamp) {
-            if (!gameRunning) return;
-            
-            const delta = timestamp - lastSpawn;
-            
-            // Spawn notes
-            if (delta > spawnInterval) {
-                const lane = Math.floor(Math.random() * 4);
-                spawnNote(lane);
-                lastSpawn = timestamp;
-            }
-            
-            // Move notes
-            const hitY = window.innerHeight - 280;
-            for (let i = notesEl.length - 1; i >= 0; i--) {
-                const note = notesEl[i];
-                if (note.el.dataset.active === 'false') continue;
-                
-                note.y += (noteSpeed / 60) * 1.5;
-                note.el.style.top = `${note.y}px`;
-                
-                // Missed note
-                if (note.y > hitY + 100) {
-                    note.el.remove();
-                    notesEl.splice(i, 1);
-                    combo = 0;
-                    showFeedback('MISS', '#ff0066');
-                    updateUI();
-                }
-            }
-            
-            requestAnimationFrame(gameLoop);
+        function gameOver_() {
+            gameRunning = false;
+            document.getElementById('game-over').style.display = 'flex';
+            document.getElementById('final-score').textContent = `Score: ${Math.floor(score)}`;
+            document.getElementById('topics-caught').textContent = `Topics Caught: ${topicsCaught}`;
         }
 
         function startGame() {
             document.getElementById('start-screen').style.display = 'none';
-            gameRunning = true;
+            lives = 5;
             score = 0;
             combo = 0;
             maxCombo = 0;
-            updateTopicBar();
+            topicsCaught = 0;
+            speed = 0.4;
+            targetLane = 0;
+            lane = 0;
             updateUI();
-            lastSpawn = performance.now();
-            requestAnimationFrame(gameLoop);
-        }
-
-        function restart() {
-            document.getElementById('game-over').style.display = 'none';
-            notesEl.forEach(n => n.el.remove());
-            notesEl.length = 0;
             gameRunning = true;
-            score = 0;
-            combo = 0;
-            updateTopicBar();
-            updateUI();
-            lastSpawn = performance.now();
-            requestAnimationFrame(gameLoop);
         }
 
-        // Start button
         document.getElementById('start-btn').addEventListener('click', async () => {
             await initAudio();
             startGame();
         });
+        
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            items.forEach(i => scene.remove(i));
+            items.length = 0;
+            particles.forEach(p => scene.remove(p));
+            particles.length = 0;
+            startGame();
+        });
 
-        // Keyboard start
-        window.addEventListener('keydown', (e) => {
-            if (!gameRunning && document.getElementById('start-screen').style.display !== 'none') {
-                if (['a','s','d','f',' '].includes(e.key.toLowerCase())) {
-                    document.getElementById('start-btn').click();
+        // Game loop
+        let frame = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            frame++;
+            
+            if (!gameRunning) {
+                renderer.render(scene, camera);
+                return;
+            }
+            
+            // Player movement
+            lane += (targetLane - lane) * 0.12;
+            playerGroup.position.x = lane;
+            
+            // Player animation
+            core.rotation.y += 0.02;
+            core.rotation.x += 0.01;
+            glow.rotation.y -= 0.01;
+            playerGroup.position.y = 0.7 + Math.sin(frame * 0.08) * 0.1;
+            
+            // Spawn items
+            if (frame % 35 === 0) {
+                createItem();
+            }
+            
+            // Move items
+            for (let i = items.length - 1; i >= 0; i--) {
+                const item = items[i];
+                item.position.z += speed;
+                item.rotation.y += 0.03;
+                
+                const sphere = item.children[1];
+                if (sphere) sphere.position.y = 0.5 + Math.sin(frame * 0.1) * 0.1;
+                
+                // Collision
+                const dx = item.position.x - playerGroup.position.x;
+                const dz = item.position.z - playerGroup.position.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+                
+                if (dist < 0.9 && Math.abs(dz) < 0.6) {
+                    if (item.userData.isBad) {
+                        lives--;
+                        combo = 0;
+                        screenShake();
+                        if (hitSound) hitSound.triggerAttackRelease('C1', '8n');
+                        if (lives <= 0) {
+                            gameOver_();
+                        }
+                    } else {
+                        score += item.userData.points * (1 + Math.floor(combo / 10) * 0.1);
+                        topicsCaught++;
+                        combo++;
+                        if (combo > maxCombo) maxCombo = combo;
+                        createParticles(item.position, item.userData.color);
+                        comboBurst(combo);
+                        if (hitSound) hitSound.triggerAttackRelease('C3', '16n');
+                    }
+                    scene.remove(item);
+                    items.splice(i, 1);
+                    updateUI();
+                    continue;
+                }
+                
+                if (item.position.z > 15) {
+                    scene.remove(item);
+                    items.splice(i, 1);
                 }
             }
+            
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.position.add(p.userData.vel);
+                p.userData.vel.y -= 0.015;
+                p.userData.life -= 0.025;
+                p.scale.setScalar(p.userData.life);
+                
+                if (p.userData.life <= 0) {
+                    scene.remove(p);
+                    particles.splice(i, 1);
+                }
+            }
+            
+            // Speed scaling
+            speed = 0.4 + score * 0.00015;
+            
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         });
+
+        animate();
     </script>
 </body>
 </html>
